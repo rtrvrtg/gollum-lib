@@ -28,26 +28,28 @@ class Gollum::Filter::TOC < Gollum::Filter
       # Add anchors
       anchor_element = %Q(<a class="anchor" id="#{h_name}" href="##{h_name}"><i class="fa fa-link"></i></a>)
       # Add anchor element as the first child (before h.content)
-      h.children.before anchor_element
+      unless h.children.empty?
+        h.children.before anchor_element
 
-      # Build TOC
-      toc        ||= Nokogiri::XML::DocumentFragment.parse('<div class="toc"><div class="toc-title">Table of Contents</div></div>')
-      tail       ||= toc.child
-      tail_level ||= 0
+        # Build TOC
+        toc        ||= Nokogiri::XML::DocumentFragment.parse('<div class="toc"><div class="toc-title">Table of Contents</div></div>')
+        tail       ||= toc.child
+        tail_level ||= 0
 
-      while tail_level < level
-        node       = Nokogiri::XML::Node.new('ul', doc)
-        tail       = tail.add_child(node)
-        tail_level += 1
+        while tail_level < level
+          node       = Nokogiri::XML::Node.new('ul', doc)
+          tail       = tail.add_child(node)
+          tail_level += 1
+        end
+        while tail_level > level
+          tail       = tail.parent
+          tail_level -= 1
+        end
+        node = Nokogiri::XML::Node.new('li', doc)
+        # % -> %25 so anchors work on Firefox. See issue #475
+        node.add_child(%Q{<a href="##{h_name}">#{h.content}</a>})
+        tail.add_child(node)
       end
-      while tail_level > level
-        tail       = tail.parent
-        tail_level -= 1
-      end
-      node = Nokogiri::XML::Node.new('li', doc)
-      # % -> %25 so anchors work on Firefox. See issue #475
-      node.add_child(%Q{<a href="##{h_name}">#{h.content}</a>})
-      tail.add_child(node)
     end
 
     toc  = toc.to_xml(@markup.to_xml_opts) if toc != nil
